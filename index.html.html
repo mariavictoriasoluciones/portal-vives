@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vives Soluciones — Portal de Clientes</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --navy: #0a1628;
+    --navy2: #162540;
+    --accent: #4A90D9;
+    --text: #1a1a1a;
+    --text2: #6b6b6b;
+    --border: #e5e5e5;
+    --bg: #f5f4f0;
+    --white: #ffffff;
+    --danger: #a32d2d;
+    --warn: #854f0b;
+    --ok: #3b6d11;
+    --info: #185fa5;
+    --danger-bg: #fcebeb;
+    --warn-bg: #faeeda;
+    --ok-bg: #eaf3de;
+    --info-bg: #e6f1fb;
+  }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); font-size: 14px; }
+
+  /* ── LOGIN ── */
+  #login-screen { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: var(--bg); }
+  .login-card { background: var(--white); border: 1px solid var(--border); border-radius: 12px; padding: 40px; width: 340px; }
+  .login-logo { text-align: center; margin-bottom: 28px; }
+  .login-logo .brand { font-size: 12px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--navy); }
+  .login-logo .sub { font-size: 11px; color: var(--text2); letter-spacing: 0.04em; margin-top: 3px; }
+  .login-card h2 { font-size: 18px; font-weight: 500; text-align: center; margin-bottom: 6px; }
+  .login-card p { font-size: 12px; color: var(--text2); text-align: center; margin-bottom: 24px; }
+  .field { margin-bottom: 14px; }
+  .field label { display: block; font-size: 11px; font-weight: 500; color: var(--text2); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 5px; }
+  .field input { width: 100%; padding: 9px 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 13px; color: var(--text); background: var(--white); outline: none; transition: border 0.15s; }
+  .field input:focus { border-color: var(--accent); }
+  .btn-full { width: 100%; padding: 11px; background: var(--navy); color: white; border: none; border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer; margin-top: 6px; transition: background 0.15s; }
+  .btn-full:hover { background: var(--navy2); }
+  .btn-full:disabled { opacity: 0.6; cursor: not-allowed; }
+  .login-error { display: none; margin-top: 12px; padding: 9px 12px; background: var(--danger-bg); color: var(--danger); border-radius: 8px; font-size: 12px; text-align: center; }
+  .login-help { font-size: 11px; color: var(--text2); text-align: center; margin-top: 16px; }
+
+  /* ── PORTAL ── */
+  #portal-screen { display: none; min-height: 100vh; }
+  .layout { display: flex; min-height: 100vh; }
+
+  /* Sidebar */
+  .sidebar { width: 230px; background: var(--navy); flex-shrink: 0; display: flex; flex-direction: column; position: fixed; top: 0; left: 0; height: 100vh; z-index: 10; }
+  .sb-logo { padding: 24px 20px 16px; border-bottom: 1px solid rgba(255,255,255,0.08); }
+  .sb-logo .brand { font-size: 11px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: #fff; }
+  .sb-logo .sub { font-size: 10px; color: rgba(255,255,255,0.35); letter-spacing: 0.04em; margin-top: 2px; }
+  .sb-client { margin: 14px 12px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 10px 12px; }
+  .sb-client .name { font-size: 12px; font-weight: 500; color: #fff; }
+  .sb-client .id { font-size: 10px; color: rgba(255,255,255,0.35); margin-top: 2px; }
+  .sb-section { font-size: 10px; color: rgba(255,255,255,0.25); letter-spacing: 0.08em; text-transform: uppercase; padding: 14px 20px 4px; }
+  .nav-item { display: flex; align-items: center; gap: 10px; padding: 10px 20px; font-size: 13px; color: rgba(255,255,255,0.5); cursor: pointer; border-left: 2px solid transparent; transition: all 0.15s; user-select: none; }
+  .nav-item:hover { background: rgba(255,255,255,0.04); color: rgba(255,255,255,0.85); }
+  .nav-item.active { color: #fff; background: rgba(255,255,255,0.07); border-left-color: var(--accent); }
+  .nav-item svg { width: 16px; height: 16px; flex-shrink: 0; }
+  .sb-footer { margin-top: auto; padding: 14px 16px; border-top: 1px solid rgba(255,255,255,0.08); display: flex; align-items: center; gap: 10px; }
+  .avatar { width: 30px; height: 30px; border-radius: 50%; background: #1a3a5c; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; color: #7ab3e0; flex-shrink: 0; }
+  .sb-footer .fname { font-size: 12px; color: rgba(255,255,255,0.6); }
+  .logout-btn { margin-left: auto; font-size: 11px; color: rgba(255,255,255,0.3); cursor: pointer; padding: 4px; }
+  .logout-btn:hover { color: rgba(255,255,255,0.7); }
+
+  /* Main */
+  .main { margin-left: 230px; flex: 1; display: flex; flex-direction: column; min-height: 100vh; }
+  .topbar { padding: 18px 28px; border-bottom: 1px solid var(--border); background: var(--white); display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 5; }
+  .topbar-title { font-size: 16px; font-weight: 500; }
+  .topbar-sub { font-size: 12px; color: var(--text2); margin-top: 2px; }
+  .content { padding: 24px 28px; flex: 1; }
+
+  /* Metrics */
+  .metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 24px; }
+  .metric { background: var(--white); border: 1px solid var(--border); border-radius: 10px; padding: 16px; }
+  .metric-label { font-size: 11px; color: var(--text2); text-transform: uppercase; letter-spacing: 0.05em; }
+  .metric-value { font-size: 24px; font-weight: 500; margin-top: 4px; }
+  .metric-badge { display: inline-block; font-size: 10px; padding: 2px 8px; border-radius: 20px; margin-top: 5px; }
+
+  /* Tables */
+  .card { background: var(--white); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; margin-bottom: 20px; }
+  .card-header { padding: 14px 18px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+  .card-title { font-size: 13px; font-weight: 500; }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  th { font-size: 10px; font-weight: 500; color: var(--text2); text-transform: uppercase; letter-spacing: 0.05em; padding: 8px 14px; text-align: left; border-bottom: 1px solid var(--border); background: #fafaf8; }
+  td { padding: 10px 14px; border-bottom: 1px solid var(--border); color: var(--text); vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+  .bold { font-weight: 500; }
+
+  /* Badges */
+  .badge { display: inline-flex; align-items: center; padding: 2px 9px; border-radius: 20px; font-size: 10px; font-weight: 500; }
+  .badge-ok     { background: var(--ok-bg);     color: var(--ok); }
+  .badge-warn   { background: var(--warn-bg);   color: var(--warn); }
+  .badge-danger { background: var(--danger-bg); color: var(--danger); }
+  .badge-info   { background: var(--info-bg);   color: var(--info); }
+
+  /* Tabs */
+  .screen { display: none; }
+  .screen.active { display: block; }
+
+  /* Loading / empty */
+  .loading { padding: 40px; text-align: center; color: var(--text2); font-size: 13px; }
+  .spinner { display: inline-block; width: 18px; height: 18px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite; margin-right: 8px; vertical-align: middle; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .empty { padding: 40px; text-align: center; color: var(--text2); font-size: 13px; }
+
+  /* Link descarga */
+  .dl-link { font-size: 12px; color: var(--info); text-decoration: none; }
+  .dl-link:hover { text-decoration: underline; }
+
+  @media (max-width: 768px) {
+    .sidebar { width: 100%; height: auto; position: relative; }
+    .main { margin-left: 0; }
+    .metrics { grid-template-columns: repeat(2, 1fr); }
+  }
+</style>
+</head>
+<body>
+
+<!-- ══ LOGIN ══════════════════════════════════════════════ -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="brand">Vives Soluciones</div>
+      <div class="sub">Portal de clientes</div>
+    </div>
+    <h2>Ingresá a tu cuenta</h2>
+    <p>Acceso exclusivo para clientes</p>
+    <div class="field">
+      <label>Usuario</label>
+      <input type="email" id="inp-usuario" placeholder="empresa@dominio.com" autocomplete="username" />
+    </div>
+    <div class="field">
+      <label>Contraseña</label>
+      <input type="password" id="inp-pass" placeholder="••••••••" autocomplete="current-password" />
+    </div>
+    <button class="btn-full" id="btn-login" onclick="doLogin()">Ingresar</button>
+    <div class="login-error" id="login-error"></div>
+    <p class="login-help">¿Problemas para ingresar? Contactá a Vives Soluciones.</p>
+  </div>
+</div>
+
+<!-- ══ PORTAL ═════════════════════════════════════════════ -->
+<div id="portal-screen">
+  <div class="layout">
+
+    <!-- Sidebar -->
+    <div class="sidebar">
+      <div class="sb-logo">
+        <div class="brand">Vives Soluciones</div>
+        <div class="sub">Portal de clientes</div>
+      </div>
+      <div class="sb-client">
+        <div class="name" id="sb-empresa">—</div>
+        <div class="id" id="sb-sector">—</div>
+      </div>
+      <nav>
+        <div class="sb-section">Operaciones</div>
+        <div class="nav-item active" onclick="switchTab('dashboard', this)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+          Dashboard
+        </div>
+        <div class="nav-item" onclick="switchTab('pedidos', this)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M20 7H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/><path d="M16 3H8l-2 4h12l-2-4z"/></svg>
+          Pedidos
+        </div>
+        <div class="nav-item" onclick="switchTab('vencimientos', this)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><circle cx="12" cy="16" r="2" fill="currentColor"/></svg>
+          Vencimientos
+        </div>
+        <div class="nav-item" onclick="switchTab('pagos', this)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="15" y2="17"/></svg>
+          Órdenes de pago
+        </div>
+        <div class="nav-item" onclick="switchTab('documentos', this)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+          Documentos
+        </div>
+      </nav>
+      <div class="sb-footer">
+        <div class="avatar" id="sb-avatar">--</div>
+        <div class="fname" id="sb-contacto">—</div>
+        <div class="logout-btn" onclick="doLogout()" title="Cerrar sesión">✕</div>
+      </div>
+    </div>
+
+    <!-- Main -->
+    <div class="main">
+      <div class="topbar">
+        <div>
+          <div class="topbar-title" id="tab-title">Dashboard</div>
+          <div class="topbar-sub" id="tab-sub">Resumen de tu cuenta</div>
+        </div>
+      </div>
+      <div class="content">
+
+        <!-- DASHBOARD -->
+        <div id="tab-dashboard" class="screen active">
+          <div class="metrics" id="metrics-grid">
+            <div class="metric"><div class="metric-label">Pedidos activos</div><div class="metric-value" id="m-pedidos">—</div><span class="metric-badge badge-info" id="m-pedidos-b">cargando</span></div>
+            <div class="metric"><div class="metric-label">Alertas vencimiento</div><div class="metric-value" id="m-venc">—</div><span class="metric-badge badge-warn" id="m-venc-b">cargando</span></div>
+            <div class="metric"><div class="metric-label">Saldo pendiente</div><div class="metric-value" id="m-saldo">—</div><span class="metric-badge badge-warn" id="m-saldo-b">cargando</span></div>
+            <div class="metric"><div class="metric-label">Próx. vencimiento</div><div class="metric-value" id="m-prox">—</div><span class="metric-badge badge-info" id="m-prox-b">cargando</span></div>
+          </div>
+          <div class="card">
+            <div class="card-header"><span class="card-title">Pedidos recientes</span></div>
+            <div id="dash-pedidos"><div class="loading"><span class="spinner"></span>Cargando...</div></div>
+          </div>
+          <div class="card">
+            <div class="card-header"><span class="card-title">Alertas de vencimiento</span></div>
+            <div id="dash-venc"><div class="loading"><span class="spinner"></span>Cargando...</div></div>
+          </div>
+        </div>
+
+        <!-- PEDIDOS -->
+        <div id="tab-pedidos" class="screen">
+          <div class="card">
+            <div class="card-header"><span class="card-title">Todos mis pedidos</span></div>
+            <div id="tabla-pedidos"><div class="loading"><span class="spinner"></span>Cargando...</div></div>
+          </div>
+        </div>
+
+        <!-- VENCIMIENTOS -->
+        <div id="tab-vencimientos" class="screen">
+          <div class="card">
+            <div class="card-header"><span class="card-title">Control de vencimientos</span></div>
+            <div id="tabla-vencimientos"><div class="loading"><span class="spinner"></span>Cargando...</div></div>
+          </div>
+        </div>
+
+        <!-- PAGOS -->
+        <div id="tab-pagos" class="screen">
+          <div class="card">
+            <div class="card-header"><span class="card-title">Órdenes de pago</span></div>
+            <div id="tabla-pagos"><div class="loading"><span class="spinner"></span>Cargando...</div></div>
+          </div>
+        </div>
+
+        <!-- DOCUMENTOS -->
+        <div id="tab-documentos" class="screen">
+          <div class="card">
+            <div class="card-header"><span class="card-title">Documentos disponibles</span></div>
+            <div id="tabla-documentos"><div class="loading"><span class="spinner"></span>Cargando...</div></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── CONFIG ──────────────────────────────────────────────────
+var API = 'https://script.google.com/macros/s/AKfycbw5qizt6vTH6Fcgb0jf6EvCrHG6JjCwv45afY_CjeI2gi6TNbwj-RqjjGeD1M9Xm8KF/exec';
+
+// ── SESIÓN ──────────────────────────────────────────────────
+var sesion = null;
+
+function guardarSesion(data) {
+  sesion = data;
+  sessionStorage.setItem('vives_sesion', JSON.stringify(data));
+}
+function cargarSesion() {
+  var s = sessionStorage.getItem('vives_sesion');
+  return s ? JSON.parse(s) : null;
+}
+function borrarSesion() {
+  sesion = null;
+  sessionStorage.removeItem('vives_sesion');
+}
+
+// ── LOGIN ────────────────────────────────────────────────────
+function doLogin() {
+  var usuario  = document.getElementById('inp-usuario').value.trim();
+  var password = document.getElementById('inp-pass').value.trim();
+  var btnLogin = document.getElementById('btn-login');
+  var errDiv   = document.getElementById('login-error');
+
+  errDiv.style.display = 'none';
+
+  if (!usuario || !password) {
+    mostrarError('Completá usuario y contraseña.');
+    return;
+  }
+
+  btnLogin.disabled = true;
+  btnLogin.textContent = 'Verificando...';
+
+  var url = API + '?action=login&usuario=' + encodeURIComponent(usuario) + '&password=' + encodeURIComponent(password);
+
+  fetch(url)
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.ok) {
+        guardarSesion(data);
+        mostrarPortal(data);
+      } else {
+        mostrarError(data.error || 'Error al iniciar sesión.');
+        btnLogin.disabled = false;
+        btnLogin.textContent = 'Ingresar';
+      }
+    })
+    .catch(function() {
+      mostrarError('No se pudo conectar. Revisá tu conexión.');
+      btnLogin.disabled = false;
+      btnLogin.textContent = 'Ingresar';
+    });
+}
+
+function mostrarError(msg) {
+  var e = document.getElementById('login-error');
+  e.textContent = msg;
+  e.style.display = 'block';
+}
+
+// Enter en campos de login
+document.addEventListener('DOMContentLoaded', function() {
+  ['inp-usuario','inp-pass'].forEach(function(id) {
+    document.getElementById(id).addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') doLogin();
+    });
+  });
+  // Intentar restaurar sesión
+  var s = cargarSesion();
+  if (s) mostrarPortal(s);
+});
+
+// ── PORTAL ───────────────────────────────────────────────────
+function mostrarPortal(data) {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('portal-screen').style.display = 'block';
+
+  document.getElementById('sb-empresa').textContent = data.empresa || '—';
+  document.getElementById('sb-sector').textContent  = data.sector  || '';
+  document.getElementById('sb-contacto').textContent = data.contacto || data.empresa || '—';
+
+  var iniciales = (data.empresa || 'CL').substring(0, 2).toUpperCase();
+  document.getElementById('sb-avatar').textContent = iniciales;
+
+  cargarResumen();
+  cargarDatos('pedidos');
+  cargarDatos('vencimientos');
+  cargarDatos('pagos');
+  cargarDatos('documentos');
+}
+
+function doLogout() {
+  borrarSesion();
+  document.getElementById('portal-screen').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('inp-pass').value = '';
+  document.getElementById('btn-login').disabled = false;
+  document.getElementById('btn-login').textContent = 'Ingresar';
+}
+
+// ── TABS ─────────────────────────────────────────────────────
+var tabMeta = {
+  dashboard:     { title: 'Dashboard',           sub: 'Resumen de tu cuenta' },
+  pedidos:       { title: 'Mis pedidos',          sub: 'Estado de cada pedido' },
+  vencimientos:  { title: 'Vencimientos',         sub: 'Fechas críticas y alertas' },
+  pagos:         { title: 'Órdenes de pago',      sub: 'Historial y pendientes' },
+  documentos:    { title: 'Documentos',           sub: 'Facturas, remitos y certificados' },
+};
+
+function switchTab(tab, el) {
+  document.querySelectorAll('.nav-item').forEach(function(n) { n.classList.remove('active'); });
+  el.classList.add('active');
+  document.querySelectorAll('.screen').forEach(function(s) { s.classList.remove('active'); });
+  document.getElementById('tab-' + tab).classList.add('active');
+  document.getElementById('tab-title').textContent = tabMeta[tab].title;
+  document.getElementById('tab-sub').textContent   = tabMeta[tab].sub;
+}
+
+// ── API CALLS ────────────────────────────────────────────────
+var cache = {};
+
+function apiCall(action, callback) {
+  if (cache[action]) { callback(cache[action]); return; }
+  var cid = sesion ? sesion.cliente_id : '';
+  var url = API + '?action=' + action + '&cliente_id=' + encodeURIComponent(cid);
+  fetch(url)
+    .then(function(r) { return r.json(); })
+    .then(function(data) { cache[action] = data; callback(data); })
+    .catch(function() { callback({ ok: false, error: 'Error de conexión' }); });
+}
+
+// ── RESUMEN (DASHBOARD) ───────────────────────────────────────
+function cargarResumen() {
+  apiCall('resumen', function(data) {
+    if (!data.ok) return;
+    var r = data.resumen;
+
+    document.getElementById('m-pedidos').textContent = r.pedidos_activos;
+    document.getElementById('m-pedidos-b').textContent = 'en curso';
+
+    document.getElementById('m-venc').textContent = r.venc_criticos;
+    var bv = document.getElementById('m-venc-b');
+    bv.textContent = r.venc_criticos > 0 ? 'atención' : 'sin alertas';
+    bv.className = 'metric-badge ' + (r.venc_criticos > 0 ? 'badge-danger' : 'badge-ok');
+
+    var saldo = r.saldo_pendiente;
+    document.getElementById('m-saldo').textContent = saldo > 0 ? '$' + saldo.toLocaleString('es-AR') : '$0';
+    var bs = document.getElementById('m-saldo-b');
+    bs.textContent = saldo > 0 ? 'pendiente' : 'al día';
+    bs.className = 'metric-badge ' + (saldo > 0 ? 'badge-warn' : 'badge-ok');
+
+    var pv = r.proximo_venc_dias;
+    document.getElementById('m-prox').textContent = pv !== null ? pv + ' días' : 'sin datos';
+    var bp = document.getElementById('m-prox-b');
+    if (pv !== null) {
+      bp.textContent = pv <= 3 ? 'urgente' : pv <= 7 ? 'próximo' : 'ok';
+      bp.className = 'metric-badge ' + (pv <= 3 ? 'badge-danger' : pv <= 7 ? 'badge-warn' : 'badge-ok');
+    }
+  });
+}
+
+// ── CARGAR DATOS ──────────────────────────────────────────────
+function cargarDatos(modulo) {
+  apiCall(modulo, function(data) {
+    if (modulo === 'pedidos')      renderPedidos(data);
+    if (modulo === 'vencimientos') renderVencimientos(data);
+    if (modulo === 'pagos')        renderPagos(data);
+    if (modulo === 'documentos')   renderDocumentos(data);
+  });
+}
+
+// ── RENDER PEDIDOS ────────────────────────────────────────────
+function badgeEstadoPedido(estado) {
+  var map = { 'Entregado': 'ok', 'En tránsito': 'info', 'En producción': 'warn', 'Confirmado': 'warn' };
+  var cls = map[estado] || 'info';
+  return '<span class="badge badge-' + cls + '">' + estado + '</span>';
+}
+
+function renderPedidos(data) {
+  var recientes = document.getElementById('dash-pedidos');
+  var tabla     = document.getElementById('tabla-pedidos');
+  if (!data.ok || !data.datos.length) {
+    var msg = '<div class="empty">Sin pedidos registrados</div>';
+    recientes.innerHTML = msg; tabla.innerHTML = msg; return;
+  }
+  var filas = data.datos.map(function(r) {
+    return '<tr><td class="bold">' + (r.nro_pedido||'—') + '</td><td>' + (r.descripcion||'—') + '</td><td>' + (r.proveedor||'—') + '</td><td>' + (r.fecha_estimada||'—') + '</td><td>' + badgeEstadoPedido(r.estado||'—') + '</td></tr>';
+  });
+  var html = '<table><thead><tr><th>Nro. pedido</th><th>Descripción</th><th>Proveedor</th><th>Fecha estimada</th><th>Estado</th></tr></thead><tbody>' + filas.join('') + '</tbody></table>';
+  tabla.innerHTML = html;
+  recientes.innerHTML = '<table><thead><tr><th>Nro. pedido</th><th>Descripción</th><th>Fecha estimada</th><th>Estado</th></tr></thead><tbody>' +
+    data.datos.slice(0,5).map(function(r) {
+      return '<tr><td class="bold">'+(r.nro_pedido||'—')+'</td><td>'+(r.descripcion||'—')+'</td><td>'+(r.fecha_estimada||'—')+'</td><td>'+badgeEstadoPedido(r.estado||'—')+'</td></tr>';
+    }).join('') + '</tbody></table>';
+}
+
+// ── RENDER VENCIMIENTOS ───────────────────────────────────────
+function badgeVenc(estado) {
+  var map = { 'Vencida': 'danger', 'Próximo': 'warn', 'Al día': 'ok' };
+  return '<span class="badge badge-' + (map[estado]||'info') + '">' + estado + '</span>';
+}
+
+function renderVencimientos(data) {
+  var dashEl = document.getElementById('dash-venc');
+  var tablaEl = document.getElementById('tabla-vencimientos');
+  if (!data.ok || !data.datos.length) {
+    var msg = '<div class="empty">Sin vencimientos registrados</div>';
+    dashEl.innerHTML = msg; tablaEl.innerHTML = msg; return;
+  }
+  var filas = data.datos.map(function(r) {
+    var dias = r.dias_restantes !== undefined ? (r.dias_restantes < 0 ? 'Vencida hace ' + Math.abs(r.dias_restantes) + ' días' : 'En ' + r.dias_restantes + ' días') : '—';
+    return '<tr><td class="bold">'+(r.documento||'—')+'</td><td>'+(r.tipo||'—')+'</td><td>'+(r.fecha_vencimiento||'—')+'</td><td>'+dias+'</td><td>'+badgeVenc(r.estado||'—')+'</td></tr>';
+  });
+  var html = '<table><thead><tr><th>Documento</th><th>Tipo</th><th>Vencimiento</th><th>Días restantes</th><th>Estado</th></tr></thead><tbody>'+filas.join('')+'</tbody></table>';
+  tablaEl.innerHTML = html;
+  var criticos = data.datos.filter(function(r) { return r.estado === 'Vencida' || r.estado === 'Próximo'; });
+  if (!criticos.length) { dashEl.innerHTML = '<div class="empty">Sin alertas activas</div>'; return; }
+  dashEl.innerHTML = '<table><thead><tr><th>Documento</th><th>Vencimiento</th><th>Estado</th></tr></thead><tbody>' +
+    criticos.slice(0,5).map(function(r) {
+      return '<tr><td class="bold">'+(r.documento||'—')+'</td><td>'+(r.fecha_vencimiento||'—')+'</td><td>'+badgeVenc(r.estado)+'</td></tr>';
+    }).join('') + '</tbody></table>';
+}
+
+// ── RENDER PAGOS ──────────────────────────────────────────────
+function badgePago(estado) {
+  var map = { 'Pagada': 'ok', 'Pendiente': 'warn', 'Vencida': 'danger', 'En proceso': 'info' };
+  return '<span class="badge badge-' + (map[estado]||'info') + '">' + estado + '</span>';
+}
+
+function renderPagos(data) {
+  var el = document.getElementById('tabla-pagos');
+  if (!data.ok || !data.datos.length) { el.innerHTML = '<div class="empty">Sin órdenes de pago</div>'; return; }
+  el.innerHTML = '<table><thead><tr><th>Nro. OP</th><th>Ref. pedido</th><th>Concepto</th><th>Importe</th><th>Fecha emisión</th><th>Estado</th></tr></thead><tbody>' +
+    data.datos.map(function(r) {
+      var imp = r.importe ? '$' + Number(r.importe).toLocaleString('es-AR') : '—';
+      return '<tr><td class="bold">'+(r.nro_op||'—')+'</td><td>'+(r.ref_pedido||'—')+'</td><td>'+(r.concepto||'—')+'</td><td class="bold">'+imp+'</td><td>'+(r.fecha_emision||'—')+'</td><td>'+badgePago(r.estado||'—')+'</td></tr>';
+    }).join('') + '</tbody></table>';
+}
+
+// ── RENDER DOCUMENTOS ─────────────────────────────────────────
+function renderDocumentos(data) {
+  var el = document.getElementById('tabla-documentos');
+  if (!data.ok || !data.datos.length) { el.innerHTML = '<div class="empty">Sin documentos disponibles</div>'; return; }
+  el.innerHTML = '<table><thead><tr><th>Nombre</th><th>Tipo</th><th>Fecha</th><th>Descarga</th></tr></thead><tbody>' +
+    data.datos.map(function(r) {
+      var link = r.url_descarga ? '<a class="dl-link" href="' + r.url_descarga + '" target="_blank">Descargar</a>' : '—';
+      return '<tr><td class="bold">'+(r.nombre||'—')+'</td><td>'+(r.tipo||'—')+'</td><td>'+(r.fecha||'—')+'</td><td>'+link+'</td></tr>';
+    }).join('') + '</tbody></table>';
+}
+</script>
+</body>
+</html>
