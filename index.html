@@ -1,585 +1,357 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Vives Soluciones — Portal de Clientes</title>
-<style>
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-:root{
-  --navy:#0a1628;--navy2:#162540;--accent:#4A90D9;
-  --text:#1a1a1a;--text2:#6b6b6b;--border:#e5e5e5;--bg:#f5f4f0;--white:#fff;
-  --ok:#3b6d11;--ok-bg:#eaf3de;--warn:#854f0b;--warn-bg:#faeeda;
-  --danger:#a32d2d;--danger-bg:#fcebeb;--info:#185fa5;--info-bg:#e6f1fb;
+// ============================================================
+//  VIVES SOLUCIONES — Portal de Clientes v2
+//  Google Apps Script — Backend completo
+//  Pegá este código en: Extensiones > Apps Script
+// ============================================================
+ 
+function doGet(e) {
+  var params  = e.parameter;
+  var action  = params.action || '';
+  var cid     = params.cliente_id || '';
+  var result;
+ 
+  if      (action === 'login')              result = login(params.cuit, params.password);
+  else if (action === 'pedidos')            result = getPedidos(cid, params.rubro);
+  else if (action === 'facturas')           result = getFacturas(cid, params.rubro);
+  else if (action === 'vencimientos')       result = getVencimientos(cid, params.rubro);
+  else if (action === 'matafuegos')         result = getMatafuegos(cid);
+  else if (action === 'presupuestos')       result = getPresupuestos(cid, params.rubro);
+  else if (action === 'ordenes_compra')     result = getOrdenesCompra(cid, params.rubro);
+  else if (action === 'comprobantes')       result = getComprobantes(cid);
+  else if (action === 'resumen')            result = getResumen(cid);
+  else if (action === 'rubros')             result = getRubros(cid);
+  else result = { ok: false, error: 'Acción no reconocida' };
+ 
+  return resp(result);
 }
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);font-size:14px}
-
-/* LOGIN */
-#login-screen{min-height:100vh;display:flex;align-items:center;justify-content:center}
-.login-card{background:var(--white);border:1px solid var(--border);border-radius:12px;padding:40px;width:340px;box-shadow:0 4px 24px rgba(0,0,0,0.06)}
-.login-logo{text-align:center;margin-bottom:28px}
-.login-logo .brand{font-size:12px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:var(--navy)}
-.login-logo .sub{font-size:11px;color:var(--text2);margin-top:3px}
-.login-card h2{font-size:18px;font-weight:500;text-align:center;margin-bottom:6px}
-.login-card p{font-size:12px;color:var(--text2);text-align:center;margin-bottom:24px}
-.field{margin-bottom:14px}
-.field label{display:block;font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:5px}
-.field input{width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;outline:none;transition:border 0.15s}
-.field input:focus{border-color:var(--accent)}
-.btn-full{width:100%;padding:11px;background:var(--navy);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;margin-top:6px;transition:background 0.15s}
-.btn-full:hover{background:var(--navy2)}
-.btn-full:disabled{opacity:0.6;cursor:not-allowed}
-.login-error{display:none;margin-top:12px;padding:9px 12px;background:var(--danger-bg);color:var(--danger);border-radius:8px;font-size:12px;text-align:center}
-.login-help{font-size:11px;color:var(--text2);text-align:center;margin-top:16px}
-
-/* PORTAL */
-#portal-screen{display:none;min-height:100vh}
-.layout{display:flex;min-height:100vh}
-
-/* SIDEBAR */
-.sidebar{width:240px;background:var(--navy);flex-shrink:0;display:flex;flex-direction:column;position:fixed;top:0;left:0;height:100vh;z-index:10;overflow-y:auto}
-.sb-logo{padding:22px 20px 14px;border-bottom:1px solid rgba(255,255,255,0.08)}
-.sb-logo .brand{font-size:11px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#fff}
-.sb-logo .sub{font-size:10px;color:rgba(255,255,255,0.35);margin-top:2px}
-.sb-client{margin:12px 12px 4px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:10px 12px}
-.sb-client .name{font-size:12px;font-weight:600;color:#fff}
-.sb-client .cuit{font-size:10px;color:rgba(255,255,255,0.35);margin-top:2px}
-.sb-section{font-size:9px;color:rgba(255,255,255,0.25);letter-spacing:0.1em;text-transform:uppercase;padding:14px 20px 4px}
-.nav-item{display:flex;align-items:center;gap:9px;padding:9px 20px;font-size:12px;color:rgba(255,255,255,0.5);cursor:pointer;border-left:2px solid transparent;transition:all 0.15s;user-select:none}
-.nav-item:hover{background:rgba(255,255,255,0.04);color:rgba(255,255,255,0.85)}
-.nav-item.active{color:#fff;background:rgba(255,255,255,0.07);border-left-color:var(--accent)}
-.nav-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;background:rgba(255,255,255,0.2)}
-.nav-dot.ok{background:#4caf50}.nav-dot.warn{background:#ff9800}.nav-dot.danger{background:#f44336}
-.sb-footer{margin-top:auto;padding:14px 16px;border-top:1px solid rgba(255,255,255,0.08);display:flex;align-items:center;gap:10px}
-.avatar{width:30px;height:30px;border-radius:50%;background:#1a3a5c;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#7ab3e0;flex-shrink:0}
-.sb-footer .fname{font-size:12px;color:rgba(255,255,255,0.6);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.logout-btn{font-size:11px;color:rgba(255,255,255,0.3);cursor:pointer;padding:4px;flex-shrink:0}
-.logout-btn:hover{color:rgba(255,255,255,0.7)}
-
-/* MAIN */
-.main{margin-left:240px;flex:1;display:flex;flex-direction:column;min-height:100vh}
-.topbar{padding:16px 26px;border-bottom:1px solid var(--border);background:var(--white);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:5}
-.topbar-title{font-size:16px;font-weight:600}
-.topbar-sub{font-size:12px;color:var(--text2);margin-top:1px}
-.content{padding:22px 26px;flex:1}
-
-/* MÉTRICAS */
-.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
-.metric{background:var(--white);border:1px solid var(--border);border-radius:10px;padding:14px 16px}
-.metric-label{font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:0.05em}
-.metric-value{font-size:22px;font-weight:600;margin-top:4px}
-.metric-badge{display:inline-block;font-size:10px;padding:2px 8px;border-radius:20px;margin-top:4px}
-
-/* CARDS */
-.card{background:var(--white);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:16px}
-.card-header{padding:13px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
-.card-title{font-size:13px;font-weight:600}
-.card-sub{font-size:11px;color:var(--text2)}
-
-/* TABS INTERNOS */
-.inner-tabs{display:flex;gap:6px;padding:12px 16px;border-bottom:1px solid var(--border);flex-wrap:wrap}
-.inner-tab{padding:5px 12px;border-radius:20px;font-size:11px;font-weight:500;cursor:pointer;border:1px solid var(--border);color:var(--text2);background:transparent;transition:all 0.15s}
-.inner-tab.active{background:var(--navy);color:#fff;border-color:var(--navy)}
-
-/* TABLA */
-table{width:100%;border-collapse:collapse;font-size:12px}
-th{font-size:10px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:0.05em;padding:8px 12px;text-align:left;border-bottom:1px solid var(--border);background:#fafaf8}
-td{padding:9px 12px;border-bottom:1px solid var(--border);color:var(--text);vertical-align:middle}
-tr:last-child td{border-bottom:none}
-tr:hover td{background:#fafaf8}
-.bold{font-weight:600}
-
-/* BADGES */
-.badge{display:inline-flex;align-items:center;gap:3px;padding:2px 9px;border-radius:20px;font-size:10px;font-weight:600}
-.badge-ok{background:var(--ok-bg);color:var(--ok)}
-.badge-warn{background:var(--warn-bg);color:var(--warn)}
-.badge-danger{background:var(--danger-bg);color:var(--danger)}
-.badge-info{background:var(--info-bg);color:var(--info)}
-
-/* SEMÁFORO */
-.semaforo{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:600}
-.sem-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
-.sem-verde .sem-dot{background:#4caf50}.sem-verde{color:#2e7d32}
-.sem-naranja .sem-dot{background:#ff9800}.sem-naranja{color:#e65100}
-.sem-rojo .sem-dot{background:#f44336}.sem-rojo{color:#c62828}
-
-/* PANTALLAS */
-.screen{display:none}.screen.active{display:block}
-
-/* LOADING */
-.loading{padding:36px;text-align:center;color:var(--text2);font-size:13px}
-.spinner{display:inline-block;width:16px;height:16px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin 0.7s linear infinite;margin-right:8px;vertical-align:middle}
-@keyframes spin{to{transform:rotate(360deg)}}
-.empty{padding:36px;text-align:center;color:var(--text2);font-size:13px}
-
-/* RUBRO HEADER */
-.rubro-header{display:flex;align-items:center;gap:10px;margin-bottom:16px}
-.rubro-tag{font-size:11px;padding:3px 10px;border-radius:20px;background:var(--info-bg);color:var(--info);font-weight:600}
-.rubro-type{font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:0.05em}
-
-/* LINK */
-.dl-link{font-size:12px;color:var(--info);text-decoration:none}
-.dl-link:hover{text-decoration:underline}
-
-/* SECCIÓN RUBROS DASHBOARD */
-.rubros-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin-bottom:20px}
-.rubro-card{background:var(--white);border:1px solid var(--border);border-radius:10px;padding:14px 16px;cursor:pointer;transition:all 0.15s;border-left:3px solid var(--accent)}
-.rubro-card:hover{box-shadow:0 2px 12px rgba(0,0,0,0.08);transform:translateY(-1px)}
-.rubro-card-name{font-size:13px;font-weight:600;color:var(--text)}
-.rubro-card-type{font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:0.04em;margin-top:2px}
-.rubro-card-stats{margin-top:10px;display:flex;gap:8px;flex-wrap:wrap}
-
-@media(max-width:768px){
-  .sidebar{width:100%;height:auto;position:relative}
-  .main{margin-left:0}
-  .metrics{grid-template-columns:repeat(2,1fr)}
+ 
+// ── HELPERS ──────────────────────────────────────────────────
+function hoja(nombre) {
+  return SpreadsheetApp.getActiveSpreadsheet().getSheetByName(nombre);
 }
-</style>
-</head>
-<body>
-
-<!-- LOGIN -->
-<div id="login-screen">
-  <div class="login-card">
-    <div class="login-logo">
-      <div class="brand">Vives Soluciones</div>
-      <div class="sub">Portal de clientes</div>
-    </div>
-    <h2>Ingresá a tu cuenta</h2>
-    <p>Acceso exclusivo para clientes</p>
-    <div class="field">
-      <label>CUIT</label>
-      <input type="text" id="inp-cuit" placeholder="20-12345678-9" autocomplete="username"/>
-    </div>
-    <div class="field">
-      <label>Contraseña</label>
-      <input type="password" id="inp-pass" placeholder="••••••••" autocomplete="current-password"/>
-    </div>
-    <button class="btn-full" id="btn-login" onclick="doLogin()">Ingresar</button>
-    <div class="login-error" id="login-error"></div>
-    <p class="login-help">¿Problemas para ingresar? Contactá a Vives Soluciones.</p>
-  </div>
-</div>
-
-<!-- PORTAL -->
-<div id="portal-screen">
-  <div class="layout">
-    <div class="sidebar">
-      <div class="sb-logo">
-        <div class="brand">Vives Soluciones</div>
-        <div class="sub">Portal de clientes</div>
-      </div>
-      <div class="sb-client">
-        <div class="name" id="sb-empresa">—</div>
-        <div class="cuit" id="sb-cuit">—</div>
-      </div>
-      <nav id="sidebar-nav">
-        <div class="sb-section">Inicio</div>
-        <div class="nav-item active" onclick="switchTab('dashboard',this)">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
-          Dashboard
-        </div>
-        <div class="sb-section">Mis rubros</div>
-        <div id="rubros-nav"></div>
-        <div class="sb-section">Cuenta</div>
-        <div class="nav-item" onclick="switchTab('facturas-global',this)">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-          Facturas
-        </div>
-        <div class="nav-item" onclick="switchTab('oc-global',this)">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 7H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/><path d="M16 3H8l-2 4h12l-2-4z"/></svg>
-          Órdenes de compra
-        </div>
-      </nav>
-      <div class="sb-footer">
-        <div class="avatar" id="sb-avatar">--</div>
-        <div class="fname" id="sb-contacto">—</div>
-        <div class="logout-btn" onclick="doLogout()" title="Cerrar sesión">✕</div>
-      </div>
-    </div>
-
-    <div class="main">
-      <div class="topbar">
-        <div>
-          <div class="topbar-title" id="tab-title">Dashboard</div>
-          <div class="topbar-sub" id="tab-sub">Resumen de tu cuenta</div>
-        </div>
-      </div>
-      <div class="content">
-
-        <!-- DASHBOARD -->
-        <div id="tab-dashboard" class="screen active">
-          <div class="metrics">
-            <div class="metric"><div class="metric-label">Pedidos activos</div><div class="metric-value" id="m-pedidos">—</div><span class="metric-badge badge-info" id="m-pedidos-b">cargando</span></div>
-            <div class="metric"><div class="metric-label">Alertas vencimiento</div><div class="metric-value" id="m-alertas">—</div><span class="metric-badge badge-warn" id="m-alertas-b">cargando</span></div>
-            <div class="metric"><div class="metric-label">Saldo pendiente</div><div class="metric-value" id="m-saldo">—</div><span class="metric-badge badge-warn" id="m-saldo-b">cargando</span></div>
-            <div class="metric"><div class="metric-label">OC pendientes</div><div class="metric-value" id="m-oc">—</div><span class="metric-badge badge-info" id="m-oc-b">cargando</span></div>
-          </div>
-          <div style="font-size:13px;font-weight:600;margin-bottom:12px">Tus rubros contratados</div>
-          <div class="rubros-grid" id="rubros-grid"><div class="loading"><span class="spinner"></span>Cargando...</div></div>
-          <div class="card">
-            <div class="card-header"><span class="card-title">Pedidos recientes</span></div>
-            <div id="dash-pedidos"><div class="loading"><span class="spinner"></span>Cargando...</div></div>
-          </div>
-        </div>
-
-        <!-- RUBRO DETALLE -->
-        <div id="tab-rubro" class="screen">
-          <div class="rubro-header">
-            <div>
-              <div class="topbar-title" id="rubro-titulo">—</div>
-              <div style="display:flex;gap:8px;margin-top:4px">
-                <span class="rubro-tag" id="rubro-tag">—</span>
-                <span class="rubro-type" id="rubro-type">—</span>
-              </div>
-            </div>
-          </div>
-          <div class="inner-tabs">
-            <button class="inner-tab active" onclick="switchInner('pedidos-rubro',this)">Pedidos</button>
-            <button class="inner-tab" onclick="switchInner('venc-rubro',this)">Vencimientos</button>
-            <button class="inner-tab" onclick="switchInner('pres-rubro',this)">Presupuesto</button>
-            <button class="inner-tab" id="tab-mat-btn" onclick="switchInner('mat-rubro',this)" style="display:none">Matafuegos</button>
-          </div>
-          <div id="pedidos-rubro" class="inner-screen active-inner" style="padding:16px"><div class="loading"><span class="spinner"></span>Cargando...</div></div>
-          <div id="venc-rubro" class="inner-screen" style="display:none;padding:16px"><div class="loading"><span class="spinner"></span>Cargando...</div></div>
-          <div id="pres-rubro" class="inner-screen" style="display:none;padding:16px"><div class="loading"><span class="spinner"></span>Cargando...</div></div>
-          <div id="mat-rubro" class="inner-screen" style="display:none;padding:16px"><div class="loading"><span class="spinner"></span>Cargando...</div></div>
-        </div>
-
-        <!-- FACTURAS GLOBAL -->
-        <div id="tab-facturas-global" class="screen">
-          <div class="card">
-            <div class="card-header"><span class="card-title">Todas mis facturas</span><span class="card-sub">Descargá mes a mes</span></div>
-            <div id="tabla-facturas"><div class="loading"><span class="spinner"></span>Cargando...</div></div>
-          </div>
-        </div>
-
-        <!-- OC GLOBAL -->
-        <div id="tab-oc-global" class="screen">
-          <div class="card">
-            <div class="card-header"><span class="card-title">Órdenes de compra</span></div>
-            <div id="tabla-oc"><div class="loading"><span class="spinner"></span>Cargando...</div></div>
-          </div>
-        </div>
-
-      </div>
-    </div>
-  </div>
-</div>
-
-<script>
-var API = 'https://script.google.com/macros/s/AKfycbzkbXQA-naJK6kl0gPYTj0T0FJgDTQYUfKKtaVz1lk44yuDsH2Y_mFVICF-ga_Ix2z1/exec';
-var sesion = null;
-var cache  = {};
-var rubroActual = null;
-
-var RUBROS_META = {
-  'Indumentaria Laboral':          { tipo:'Producto', color:'#4A90D9' },
-  'Calzado de Seguridad':          { tipo:'Producto', color:'#7B68EE' },
-  'EPP':                           { tipo:'Producto', color:'#20B2AA' },
-  'Protección contra Incendios':   { tipo:'Producto', color:'#FF6347' },
-  'Limpieza Industrial':           { tipo:'Producto', color:'#32CD32' },
-  'Provisión de Materiales para la Construcción': { tipo:'Producto', color:'#DAA520' },
-  'Merchandising':                 { tipo:'Producto', color:'#FF69B4' },
-  'Obras Civiles':                 { tipo:'Servicio', color:'#8B4513' },
-  'Obras Steel Frame':             { tipo:'Servicio', color:'#708090' },
-  'Ingeniería Protección contra Incendios': { tipo:'Servicio', color:'#DC143C' },
-  'Servicios Industriales de Alta Exigencia': { tipo:'Servicio', color:'#FF8C00' },
-  'Servicios Ambientales y Empresariales':  { tipo:'Servicio', color:'#2E8B57' },
-};
-
-function semaforo(estado) {
-  var map = { 'Entregado':'verde','Al día':'verde','Pagada':'verde','Aprobado':'verde',
-              'En tránsito':'naranja','En producción':'naranja','Confirmado':'naranja','Próximo':'naranja','Pendiente':'naranja','Recibida':'naranja',
-              'Vencida':'rojo','Vencido':'rojo','En proceso':'naranja' };
-  var cls = map[estado] || 'naranja';
-  var labels = { verde:'verde', naranja:'naranja', rojo:'rojo' };
-  return '<span class="semaforo sem-'+cls+'"><span class="sem-dot"></span>'+estado+'</span>';
+ 
+function toObj(datos, desde) {
+  var cab = datos[0];
+  var result = [];
+  for (var i = desde || 1; i < datos.length; i++) {
+    if (datos[i].every(function(c){ return c === '' || c === null; })) continue;
+    var obj = {};
+    for (var j = 0; j < cab.length; j++) {
+      var v = datos[i][j];
+      obj[cab[j]] = v instanceof Date
+        ? Utilities.formatDate(v, Session.getScriptTimeZone(), 'dd/MM/yyyy')
+        : v;
+    }
+    result.push(obj);
+  }
+  return result;
 }
-
-function badge(estado) {
-  var map = { 'Entregado':'ok','Al día':'ok','Pagada':'ok','Aprobado':'ok',
-              'En tránsito':'info','Confirmado':'info','Recibida':'info',
-              'En producción':'warn','Pendiente':'warn','Próximo':'warn','En proceso':'info',
-              'Vencida':'danger','Vencido':'danger' };
-  return '<span class="badge badge-'+(map[estado]||'info')+'">'+estado+'</span>';
-}
-
-function fmt(n){ return n ? '$'+Number(n).toLocaleString('es-AR') : '—'; }
-
-// SESIÓN
-function guardar(d){ sesion=d; sessionStorage.setItem('vives',JSON.stringify(d)); }
-function borrar(){ sesion=null; sessionStorage.removeItem('vives'); }
-
-// LOGIN
-function doLogin(){
-  var cuit = document.getElementById('inp-cuit').value.trim();
-  var pass = document.getElementById('inp-pass').value.trim();
-  var btn  = document.getElementById('btn-login');
-  var err  = document.getElementById('login-error');
-  err.style.display='none';
-  if(!cuit||!pass){ showErr('Completá CUIT y contraseña.'); return; }
-  btn.disabled=true; btn.textContent='Verificando...';
-  fetch(API+'?action=login&cuit='+encodeURIComponent(cuit)+'&password='+encodeURIComponent(pass))
-    .then(function(r){return r.json();})
-    .then(function(d){
-      if(d.ok){ guardar(d); mostrarPortal(d); }
-      else{ showErr(d.error||'Error al ingresar.'); btn.disabled=false; btn.textContent='Ingresar'; }
-    })
-    .catch(function(){ showErr('No se pudo conectar. Revisá tu conexión.'); btn.disabled=false; btn.textContent='Ingresar'; });
-}
-
-function showErr(msg){ var e=document.getElementById('login-error'); e.textContent=msg; e.style.display='block'; }
-
-document.addEventListener('DOMContentLoaded',function(){
-  ['inp-cuit','inp-pass'].forEach(function(id){
-    document.getElementById(id).addEventListener('keydown',function(e){ if(e.key==='Enter') doLogin(); });
-  });
-  var s=sessionStorage.getItem('vives');
-  if(s) mostrarPortal(JSON.parse(s));
-});
-
-// PORTAL
-function mostrarPortal(d){
-  sesion=d;
-  document.getElementById('login-screen').style.display='none';
-  document.getElementById('portal-screen').style.display='block';
-  document.getElementById('sb-empresa').textContent=d.razon_social||'—';
-  document.getElementById('sb-cuit').textContent='CUIT: '+(d.cuit||'—');
-  document.getElementById('sb-contacto').textContent=d.contacto||d.razon_social||'—';
-  document.getElementById('sb-avatar').textContent=(d.razon_social||'CL').substring(0,2).toUpperCase();
-  buildRubrosNav(d.rubros||[]);
-  cargarResumen();
-  cargarFacturas();
-  cargarOC();
-  cargarPedidosGlobal();
-}
-
-function doLogout(){
-  borrar();
-  document.getElementById('portal-screen').style.display='none';
-  document.getElementById('login-screen').style.display='flex';
-  document.getElementById('inp-pass').value='';
-  document.getElementById('btn-login').disabled=false;
-  document.getElementById('btn-login').textContent='Ingresar';
-}
-
-// RUBROS NAV
-function buildRubrosNav(rubros){
-  var nav=document.getElementById('rubros-nav');
-  nav.innerHTML='';
-  rubros.forEach(function(r){
-    var meta=RUBROS_META[r]||{tipo:'',color:var_accent()};
-    var div=document.createElement('div');
-    div.className='nav-item';
-    div.innerHTML='<span class="nav-dot ok"></span>'+r;
-    div.onclick=(function(rubro){ return function(){ abrirRubro(rubro,this); }; })(r);
-    div.addEventListener('click',function(){ switchTab('rubro',div); });
-    nav.appendChild(div);
-  });
-  // Grid
-  var grid=document.getElementById('rubros-grid');
-  grid.innerHTML='';
-  rubros.forEach(function(r){
-    var meta=RUBROS_META[r]||{tipo:'',color:'#4A90D9'};
-    var card=document.createElement('div');
-    card.className='rubro-card';
-    card.style.borderLeftColor=meta.color;
-    card.innerHTML='<div class="rubro-card-name">'+r+'</div><div class="rubro-card-type">'+meta.tipo+'</div><div class="rubro-card-stats"><span class="badge badge-info">Ver detalle</span></div>';
-    card.onclick=(function(rubro){ return function(){ abrirRubroDesdeGrid(rubro); }; })(r);
-    grid.appendChild(card);
+ 
+function filtrar(rows, campo, valor) {
+  return rows.filter(function(r) {
+    return String(r[campo] || '').trim() === String(valor).trim();
   });
 }
-
-function var_accent(){ return '#4A90D9'; }
-
-function abrirRubroDesdeGrid(rubro){
-  var navItems=document.querySelectorAll('.nav-item');
-  var found=null;
-  navItems.forEach(function(n){ if(n.textContent.trim()===rubro) found=n; });
-  if(found){ switchTab('rubro',found); abrirRubro(rubro,found); }
-  else{ switchTabById('rubro'); abrirRubro(rubro,null); }
+ 
+function calcEstadoVenc(fechaStr) {
+  if (!fechaStr) return { estado: '—', dias: null };
+  var partes = fechaStr.split('/');
+  if (partes.length < 3) return { estado: '—', dias: null };
+  var fecha = new Date(partes[2], partes[1]-1, partes[0]);
+  var hoy = new Date(); hoy.setHours(0,0,0,0);
+  var dias = Math.round((fecha - hoy) / 86400000);
+  var estado = dias < 0 ? 'Vencido' : dias <= 7 ? 'Próximo' : 'Al día';
+  return { estado: estado, dias: dias };
 }
-
-function abrirRubro(rubro, navEl){
-  rubroActual=rubro;
-  var meta=RUBROS_META[rubro]||{tipo:'',color:'#4A90D9'};
-  document.getElementById('rubro-titulo').textContent=rubro;
-  document.getElementById('rubro-tag').textContent=rubro;
-  document.getElementById('rubro-tag').style.background=meta.color+'22';
-  document.getElementById('rubro-tag').style.color=meta.color;
-  document.getElementById('rubro-type').textContent=meta.tipo;
-  document.getElementById('tab-title').textContent=rubro;
-  document.getElementById('tab-sub').textContent=meta.tipo;
-
-  // Mostrar tab matafuegos solo para rubros de incendios
-  var esFuego = rubro.toLowerCase().indexOf('incendio') >= 0;
-  document.getElementById('tab-mat-btn').style.display = esFuego ? '' : 'none';
-
-  // Reset inner tabs
-  document.querySelectorAll('.inner-tab').forEach(function(t){ t.classList.remove('active'); });
-  document.querySelectorAll('.inner-screen').forEach(function(s){ s.style.display='none'; });
-  document.querySelectorAll('.inner-tab')[0].classList.add('active');
-  document.getElementById('pedidos-rubro').style.display='block';
-
-  // Cargar datos del rubro
-  cargarPedidosRubro(rubro);
-  cargarVencRubro(rubro);
-  cargarPresRubro(rubro);
-  if(esFuego) cargarMatafuegos();
+ 
+function resp(obj) {
+  return ContentService
+    .createTextOutput(JSON.stringify(obj))
+    .setMimeType(ContentService.MimeType.JSON);
 }
-
-// TABS
-var tabMeta={
-  'dashboard':        { title:'Dashboard',          sub:'Resumen de tu cuenta' },
-  'rubro':            { title:'Rubro',               sub:'' },
-  'facturas-global':  { title:'Mis facturas',        sub:'Descargá mes a mes' },
-  'oc-global':        { title:'Órdenes de compra',   sub:'Historial de OC' },
-};
-
-function switchTab(tab, el){
-  document.querySelectorAll('.nav-item').forEach(function(n){ n.classList.remove('active'); });
-  if(el) el.classList.add('active');
-  document.querySelectorAll('.screen').forEach(function(s){ s.classList.remove('active'); });
-  document.getElementById('tab-'+tab).classList.add('active');
-  var m=tabMeta[tab]||{};
-  document.getElementById('tab-title').textContent=m.title||tab;
-  document.getElementById('tab-sub').textContent=m.sub||'';
+ 
+// ── LOGIN (por CUIT) ──────────────────────────────────────────
+function login(cuit, password) {
+  if (!cuit || !password) return { ok: false, error: 'Faltan credenciales' };
+ 
+  var h = hoja('Clientes');
+  if (!h) return { ok: false, error: 'Hoja Clientes no encontrada' };
+ 
+  var rows = toObj(h.getDataRange().getValues());
+  for (var i = 0; i < rows.length; i++) {
+    var r = rows[i];
+    var cuitHoja  = String(r.cuit  || '').replace(/-/g, '').trim();
+    var cuitInput = String(cuit    || '').replace(/-/g, '').trim();
+    var passHoja  = String(r.password || '').trim();
+ 
+    if (cuitHoja === cuitInput && passHoja === password.trim()) {
+      if (String(r.activo || '').toUpperCase() !== 'SI') {
+        return { ok: false, error: 'Cuenta inactiva. Contactá a Vives Soluciones.' };
+      }
+      var rubros = String(r.rubros_activos || '').split('|').map(function(s){ return s.trim(); }).filter(Boolean);
+      return {
+        ok:         true,
+        cliente_id: r.cliente_id,
+        razon_social: r.razon_social,
+        cuit:       r.cuit,
+        contacto:   r.contacto,
+        sector:     r.sector,
+        rubros:     rubros
+      };
+    }
+  }
+  return { ok: false, error: 'CUIT o contraseña incorrectos' };
 }
-
-function switchTabById(tab){
-  document.querySelectorAll('.screen').forEach(function(s){ s.classList.remove('active'); });
-  document.getElementById('tab-'+tab).classList.add('active');
+ 
+// ── RUBROS DEL CLIENTE ────────────────────────────────────────
+function getRubros(cid) {
+  if (!cid) return { ok: false, error: 'cliente_id requerido' };
+  var h = hoja('Clientes');
+  if (!h) return { ok: false, error: 'Hoja no encontrada' };
+  var rows = toObj(h.getDataRange().getValues());
+  var cliente = rows.find(function(r){ return r.cliente_id === cid; });
+  if (!cliente) return { ok: false, error: 'Cliente no encontrado' };
+  var rubros = String(cliente.rubros_activos || '').split('|').map(function(s){ return s.trim(); }).filter(Boolean);
+  return { ok: true, rubros: rubros };
 }
-
-function switchInner(id, btn){
-  document.querySelectorAll('.inner-tab').forEach(function(t){ t.classList.remove('active'); });
-  btn.classList.add('active');
-  document.querySelectorAll('.inner-screen').forEach(function(s){ s.style.display='none'; });
-  document.getElementById(id).style.display='block';
+ 
+// ── PEDIDOS ───────────────────────────────────────────────────
+function getPedidos(cid, rubro) {
+  if (!cid) return { ok: false, error: 'cliente_id requerido' };
+  var h = hoja('Pedidos');
+  if (!h) return { ok: false, error: 'Hoja Pedidos no encontrada' };
+  var rows = filtrar(toObj(h.getDataRange().getValues()), 'cliente_id', cid);
+  if (rubro) rows = filtrar(rows, 'rubro', rubro);
+  return { ok: true, datos: rows };
 }
-
-// API
-function api(action, params, cb){
-  var key=action+JSON.stringify(params||{});
-  if(cache[key]){ cb(cache[key]); return; }
-  var cid=sesion?sesion.cliente_id:'';
-  var url=API+'?action='+action+'&cliente_id='+encodeURIComponent(cid);
-  if(params) Object.keys(params).forEach(function(k){ url+='&'+k+'='+encodeURIComponent(params[k]); });
-  fetch(url).then(function(r){return r.json();}).then(function(d){ cache[key]=d; cb(d); }).catch(function(){ cb({ok:false,error:'Error de conexión'}); });
+ 
+// ── FACTURAS ──────────────────────────────────────────────────
+function getFacturas(cid, rubro) {
+  if (!cid) return { ok: false, error: 'cliente_id requerido' };
+  var h = hoja('Facturas');
+  if (!h) return { ok: false, error: 'Hoja Facturas no encontrada' };
+  var rows = filtrar(toObj(h.getDataRange().getValues()), 'cliente_id', cid);
+  if (rubro) rows = filtrar(rows, 'rubro', rubro);
+  return { ok: true, datos: rows };
 }
-
-// RESUMEN
-function cargarResumen(){
-  api('resumen',{},function(d){
-    if(!d.ok) return;
-    var r=d.resumen;
-    document.getElementById('m-pedidos').textContent=r.pedidos_activos;
-    document.getElementById('m-pedidos-b').textContent='en curso';
-    document.getElementById('m-alertas').textContent=r.alertas_venc;
-    var ba=document.getElementById('m-alertas-b');
-    ba.textContent=r.alertas_venc>0?'atención':'sin alertas';
-    ba.className='metric-badge '+(r.alertas_venc>0?'badge-danger':'badge-ok');
-    document.getElementById('m-saldo').textContent=r.saldo_pendiente>0?'$'+Number(r.saldo_pendiente).toLocaleString('es-AR'):'$0';
-    var bs=document.getElementById('m-saldo-b');
-    bs.textContent=r.saldo_pendiente>0?'pendiente':'al día';
-    bs.className='metric-badge '+(r.saldo_pendiente>0?'badge-warn':'badge-ok');
-    document.getElementById('m-oc').textContent=r.oc_pendientes;
-    document.getElementById('m-oc-b').textContent=r.oc_pendientes>0?'pendientes':'al día';
+ 
+// ── VENCIMIENTOS (con cálculo automático) ─────────────────────
+function getVencimientos(cid, rubro) {
+  if (!cid) return { ok: false, error: 'cliente_id requerido' };
+  var h = hoja('Vencimientos');
+  if (!h) return { ok: false, error: 'Hoja Vencimientos no encontrada' };
+  var rows = filtrar(toObj(h.getDataRange().getValues()), 'cliente_id', cid);
+  if (rubro) rows = filtrar(rows, 'rubro', rubro);
+ 
+  rows = rows.map(function(r) {
+    var calc = calcEstadoVenc(r.fecha_vencimiento);
+    r.estado = calc.estado;
+    r.dias_restantes = calc.dias;
+    return r;
   });
+ 
+  rows.sort(function(a, b){ return (a.dias_restantes || 0) - (b.dias_restantes || 0); });
+  return { ok: true, datos: rows };
 }
-
-// PEDIDOS GLOBAL (dashboard)
-function cargarPedidosGlobal(){
-  api('pedidos',{},function(d){
-    var el=document.getElementById('dash-pedidos');
-    if(!d.ok||!d.datos.length){ el.innerHTML='<div class="empty">Sin pedidos registrados</div>'; return; }
-    el.innerHTML='<table><thead><tr><th>Pedido</th><th>Rubro</th><th>Descripción</th><th>Fecha est.</th><th>Estado</th></tr></thead><tbody>'+
-      d.datos.slice(0,8).map(function(r){
-        return '<tr><td class="bold">'+(r.nro_pedido||'—')+'</td><td><span class="badge badge-info" style="font-size:10px">'+(r.rubro||'—')+'</span></td><td>'+(r.descripcion||'—')+'</td><td>'+(r.fecha_estimada||'—')+'</td><td>'+semaforo(r.estado||'—')+'</td></tr>';
-      }).join('')+'</tbody></table>';
+ 
+// ── MATAFUEGOS ────────────────────────────────────────────────
+function getMatafuegos(cid) {
+  if (!cid) return { ok: false, error: 'cliente_id requerido' };
+  var h = hoja('Matafuegos');
+  if (!h) return { ok: false, error: 'Hoja Matafuegos no encontrada' };
+  var rows = filtrar(toObj(h.getDataRange().getValues()), 'cliente_id', cid);
+ 
+  rows = rows.map(function(r) {
+    var calc = calcEstadoVenc(r.fecha_vencimiento);
+    r.estado = calc.estado;
+    r.dias_restantes = calc.dias;
+    return r;
   });
+ 
+  rows.sort(function(a, b){ return (a.dias_restantes || 0) - (b.dias_restantes || 0); });
+  return { ok: true, datos: rows };
 }
-
-// PEDIDOS POR RUBRO
-function cargarPedidosRubro(rubro){
-  var el=document.getElementById('pedidos-rubro');
-  el.innerHTML='<div class="loading"><span class="spinner"></span>Cargando...</div>';
-  api('pedidos',{rubro:rubro},function(d){
-    if(!d.ok||!d.datos.length){ el.innerHTML='<div class="empty">Sin pedidos en este rubro</div>'; return; }
-    el.innerHTML='<div class="card"><table><thead><tr><th>Nro. pedido</th><th>Descripción</th><th>Proveedor</th><th>Fecha estimada</th><th>Importe</th><th>Estado</th></tr></thead><tbody>'+
-      d.datos.map(function(r){
-        return '<tr><td class="bold">'+(r.nro_pedido||'—')+'</td><td>'+(r.descripcion||'—')+'</td><td>'+(r.proveedor||'—')+'</td><td>'+(r.fecha_estimada||'—')+'</td><td class="bold">'+fmt(r.importe)+'</td><td>'+semaforo(r.estado||'—')+'</td></tr>';
-      }).join('')+'</tbody></table></div>';
+ 
+// ── PRESUPUESTOS ──────────────────────────────────────────────
+function getPresupuestos(cid, rubro) {
+  if (!cid) return { ok: false, error: 'cliente_id requerido' };
+  var h = hoja('Presupuestos');
+  if (!h) return { ok: false, error: 'Hoja Presupuestos no encontrada' };
+  var rows = filtrar(toObj(h.getDataRange().getValues()), 'cliente_id', cid);
+  if (rubro) rows = filtrar(rows, 'rubro', rubro);
+  return { ok: true, datos: rows };
+}
+ 
+// ── ORDENES DE COMPRA ─────────────────────────────────────────
+function getOrdenesCompra(cid, rubro) {
+  if (!cid) return { ok: false, error: 'cliente_id requerido' };
+  var h = hoja('OrdenesCompra');
+  if (!h) return { ok: false, error: 'Hoja OrdenesCompra no encontrada' };
+  var rows = filtrar(toObj(h.getDataRange().getValues()), 'cliente_id', cid);
+  if (rubro) rows = filtrar(rows, 'rubro', rubro);
+  return { ok: true, datos: rows };
+}
+ 
+// ── COMPROBANTES DE PAGO ──────────────────────────────────────
+function getComprobantes(cid) {
+  if (!cid) return { ok: false, error: 'cliente_id requerido' };
+  var h = hoja('ComprobantesPago');
+  if (!h) return { ok: false, error: 'Hoja ComprobantesPago no encontrada' };
+  var rows = filtrar(toObj(h.getDataRange().getValues()), 'cliente_id', cid);
+  return { ok: true, datos: rows };
+}
+ 
+// ── RESUMEN GENERAL ───────────────────────────────────────────
+function getResumen(cid) {
+  if (!cid) return { ok: false, error: 'cliente_id requerido' };
+ 
+  var hoy = new Date(); hoy.setHours(0,0,0,0);
+ 
+  // Pedidos activos
+  var pedActivos = 0;
+  var hP = hoja('Pedidos');
+  if (hP) {
+    filtrar(toObj(hP.getDataRange().getValues()), 'cliente_id', cid).forEach(function(r) {
+      if (r.estado !== 'Entregado' && r.estado !== '') pedActivos++;
+    });
+  }
+ 
+  // Alertas vencimiento (vencidos + próximos 7 días)
+  var alertas = 0;
+  var hV = hoja('Vencimientos');
+  if (hV) {
+    filtrar(toObj(hV.getDataRange().getValues()), 'cliente_id', cid).forEach(function(r) {
+      var d = calcEstadoVenc(r.fecha_vencimiento).dias;
+      if (d !== null && d <= 7) alertas++;
+    });
+  }
+ 
+  // Matafuegos con alerta
+  var matAlert = 0;
+  var hM = hoja('Matafuegos');
+  if (hM) {
+    filtrar(toObj(hM.getDataRange().getValues()), 'cliente_id', cid).forEach(function(r) {
+      var d = calcEstadoVenc(r.fecha_vencimiento).dias;
+      if (d !== null && d <= 30) matAlert++;
+    });
+  }
+ 
+  // Saldo pendiente (facturas)
+  var saldo = 0;
+  var hF = hoja('Facturas');
+  if (hF) {
+    filtrar(toObj(hF.getDataRange().getValues()), 'cliente_id', cid).forEach(function(r) {
+      if (r.estado === 'Pendiente' || r.estado === 'Vencida') {
+        saldo += Number(r.importe) || 0;
+      }
+    });
+  }
+ 
+  // OC pendientes
+  var ocPend = 0;
+  var hO = hoja('OrdenesCompra');
+  if (hO) {
+    filtrar(toObj(hO.getDataRange().getValues()), 'cliente_id', cid).forEach(function(r) {
+      if (r.estado === 'Pendiente') ocPend++;
+    });
+  }
+ 
+  return {
+    ok: true,
+    resumen: {
+      pedidos_activos:  pedActivos,
+      alertas_venc:     alertas,
+      mat_alertas:      matAlert,
+      saldo_pendiente:  saldo,
+      oc_pendientes:    ocPend
+    }
+  };
+}
+ 
+// ── ADMIN: LISTAR CLIENTES ────────────────────────────────────
+function admin_clientes() {
+  var h = hoja('Clientes');
+  if (!h) return { ok: false, error: 'Hoja no encontrada' };
+  var datos = h.getDataRange().getValues();
+  var cab = datos[0];
+  var result = [];
+  for (var i = 1; i < datos.length; i++) {
+    if (datos[i].every(function(c){ return c === '' || c === null; })) continue;
+    var obj = { _rowIndex: i + 1 };
+    for (var j = 0; j < cab.length; j++) {
+      obj[cab[j]] = datos[i][j];
+    }
+    result.push(obj);
+  }
+  return { ok: true, datos: result };
+}
+ 
+// ── ADMIN: NUEVO CLIENTE ──────────────────────────────────────
+function admin_nuevo_cliente(params) {
+  var h = hoja('Clientes');
+  if (!h) return { ok: false, error: 'Hoja no encontrada' };
+  var datos = h.getDataRange().getValues();
+  var cab = datos[0];
+ 
+  // Generar cliente_id
+  var maxId = 0;
+  for (var i = 1; i < datos.length; i++) {
+    var id = String(datos[i][0] || '').replace('CLI-', '');
+    if (!isNaN(id) && parseInt(id) > maxId) maxId = parseInt(id);
+  }
+  var nuevoId = 'CLI-' + String(maxId + 1).padStart(3, '0');
+ 
+  var fila = [];
+  cab.forEach(function(c) {
+    if (c === 'cliente_id') fila.push(nuevoId);
+    else if (c === 'razon_social') fila.push(params.razon_social || '');
+    else if (c === 'cuit') fila.push(params.cuit || '');
+    else if (c === 'password') fila.push(params.password || '');
+    else if (c === 'contacto') fila.push(params.contacto || '');
+    else if (c === 'email') fila.push(params.email || '');
+    else if (c === 'telefono') fila.push(params.telefono || '');
+    else if (c === 'sector') fila.push(params.sector || '');
+    else if (c === 'activo') fila.push(params.activo || 'SI');
+    else if (c === 'rubros_activos') fila.push(params.rubros_activos || '');
+    else fila.push('');
   });
+ 
+  h.appendRow(fila);
+  return { ok: true, cliente_id: nuevoId };
 }
-
-// VENCIMIENTOS POR RUBRO
-function cargarVencRubro(rubro){
-  var el=document.getElementById('venc-rubro');
-  el.innerHTML='<div class="loading"><span class="spinner"></span>Cargando...</div>';
-  api('vencimientos',{rubro:rubro},function(d){
-    if(!d.ok||!d.datos.length){ el.innerHTML='<div class="empty">Sin vencimientos en este rubro</div>'; return; }
-    el.innerHTML='<div class="card"><table><thead><tr><th>Documento</th><th>Tipo</th><th>Vencimiento</th><th>Días restantes</th><th>Estado</th></tr></thead><tbody>'+
-      d.datos.map(function(r){
-        var dias=r.dias_restantes!==undefined?(r.dias_restantes<0?'Venció hace '+Math.abs(r.dias_restantes)+' días':'En '+r.dias_restantes+' días'):'—';
-        return '<tr><td class="bold">'+(r.documento||'—')+'</td><td>'+(r.tipo||'—')+'</td><td>'+(r.fecha_vencimiento||'—')+'</td><td>'+dias+'</td><td>'+semaforo(r.estado||'—')+'</td></tr>';
-      }).join('')+'</tbody></table></div>';
+ 
+// ── ADMIN: EDITAR CLIENTE ─────────────────────────────────────
+function admin_editar_cliente(params) {
+  var h = hoja('Clientes');
+  if (!h) return { ok: false, error: 'Hoja no encontrada' };
+  var rowIndex = parseInt(params.row_index);
+  if (!rowIndex) return { ok: false, error: 'row_index requerido' };
+ 
+  var cab = h.getDataRange().getValues()[0];
+  cab.forEach(function(c, j) {
+    var col = j + 1;
+    if (c === 'razon_social' && params.razon_social) h.getRange(rowIndex, col).setValue(params.razon_social);
+    else if (c === 'cuit' && params.cuit) h.getRange(rowIndex, col).setValue(params.cuit);
+    else if (c === 'password' && params.password) h.getRange(rowIndex, col).setValue(params.password);
+    else if (c === 'contacto') h.getRange(rowIndex, col).setValue(params.contacto || '');
+    else if (c === 'email') h.getRange(rowIndex, col).setValue(params.email || '');
+    else if (c === 'telefono') h.getRange(rowIndex, col).setValue(params.telefono || '');
+    else if (c === 'sector') h.getRange(rowIndex, col).setValue(params.sector || '');
+    else if (c === 'activo') h.getRange(rowIndex, col).setValue(params.activo || 'SI');
+    else if (c === 'rubros_activos') h.getRange(rowIndex, col).setValue(params.rubros_activos || '');
   });
+ 
+  return { ok: true };
 }
-
-// PRESUPUESTOS POR RUBRO
-function cargarPresRubro(rubro){
-  var el=document.getElementById('pres-rubro');
-  el.innerHTML='<div class="loading"><span class="spinner"></span>Cargando...</div>';
-  api('presupuestos',{rubro:rubro},function(d){
-    if(!d.ok||!d.datos.length){ el.innerHTML='<div class="empty">Sin presupuestos en este rubro</div>'; return; }
-    el.innerHTML='<div class="card"><table><thead><tr><th>Nro. presupuesto</th><th>Descripción</th><th>Fecha</th><th>Importe</th><th>Estado</th><th>Archivo</th></tr></thead><tbody>'+
-      d.datos.map(function(r){
-        var link=r.url_archivo?'<a class="dl-link" href="'+r.url_archivo+'" target="_blank">Ver presupuesto</a>':'—';
-        return '<tr><td class="bold">'+(r.nro_presupuesto||'—')+'</td><td>'+(r.descripcion||'—')+'</td><td>'+(r.fecha||'—')+'</td><td class="bold">'+fmt(r.importe_total)+'</td><td>'+badge(r.estado||'—')+'</td><td>'+link+'</td></tr>';
-      }).join('')+'</tbody></table></div>';
-  });
+ 
+// ── ADMIN: TOGGLE ACTIVO ──────────────────────────────────────
+function admin_toggle_activo(params) {
+  var h = hoja('Clientes');
+  if (!h) return { ok: false, error: 'Hoja no encontrada' };
+  var rowIndex = parseInt(params.row_index);
+  var cab = h.getDataRange().getValues()[0];
+  var colActivo = cab.indexOf('activo') + 1;
+  if (!colActivo) return { ok: false, error: 'Columna activo no encontrada' };
+  h.getRange(rowIndex, colActivo).setValue(params.activo || 'SI');
+  return { ok: true };
 }
-
-// MATAFUEGOS
-function cargarMatafuegos(){
-  var el=document.getElementById('mat-rubro');
-  el.innerHTML='<div class="loading"><span class="spinner"></span>Cargando...</div>';
-  api('matafuegos',{},function(d){
-    if(!d.ok||!d.datos.length){ el.innerHTML='<div class="empty">Sin matafuegos registrados</div>'; return; }
-    el.innerHTML='<div class="card"><table><thead><tr><th>Código</th><th>Ubicación</th><th>Tipo</th><th>Capacidad</th><th>Ú. carga</th><th>Vencimiento</th><th>Estado</th></tr></thead><tbody>'+
-      d.datos.map(function(r){
-        return '<tr><td class="bold">'+(r.codigo||'—')+'</td><td>'+(r.ubicacion||'—')+'</td><td>'+(r.tipo||'—')+'</td><td>'+(r.capacidad||'—')+'</td><td>'+(r.fecha_carga||'—')+'</td><td>'+(r.fecha_vencimiento||'—')+'</td><td>'+semaforo(r.estado||'—')+'</td></tr>';
-      }).join('')+'</tbody></table></div>';
-  });
-}
-
-// FACTURAS
-function cargarFacturas(){
-  api('facturas',{},function(d){
-    var el=document.getElementById('tabla-facturas');
-    if(!d.ok||!d.datos.length){ el.innerHTML='<div class="empty">Sin facturas registradas</div>'; return; }
-    el.innerHTML='<table><thead><tr><th>Factura</th><th>Rubro</th><th>Período</th><th>Emisión</th><th>Vencimiento</th><th>Importe</th><th>Estado</th><th>Descarga</th></tr></thead><tbody>'+
-      d.datos.map(function(r){
-        var link=r.url_descarga?'<a class="dl-link" href="'+r.url_descarga+'" target="_blank">Descargar</a>':'—';
-        return '<tr><td class="bold">'+(r.nro_factura||'—')+'</td><td><span class="badge badge-info" style="font-size:10px">'+(r.rubro||'—')+'</span></td><td>'+(r.periodo||'—')+'</td><td>'+(r.fecha_emision||'—')+'</td><td>'+(r.fecha_vencimiento||'—')+'</td><td class="bold">'+fmt(r.importe)+'</td><td>'+semaforo(r.estado||'—')+'</td><td>'+link+'</td></tr>';
-      }).join('')+'</tbody></table>';
-  });
-}
-
-// ORDENES DE COMPRA
-function cargarOC(){
-  api('ordenes_compra',{},function(d){
-    var el=document.getElementById('tabla-oc');
-    if(!d.ok||!d.datos.length){ el.innerHTML='<div class="empty">Sin órdenes de compra registradas</div>'; return; }
-    el.innerHTML='<table><thead><tr><th>Nro. OC</th><th>Rubro</th><th>Ref. pedido</th><th>Fecha</th><th>Importe</th><th>Estado</th><th>Archivo</th></tr></thead><tbody>'+
-      d.datos.map(function(r){
-        var link=r.url_archivo?'<a class="dl-link" href="'+r.url_archivo+'" target="_blank">Ver OC</a>':'—';
-        return '<tr><td class="bold">'+(r.nro_oc||'—')+'</td><td><span class="badge badge-info" style="font-size:10px">'+(r.rubro||'—')+'</span></td><td>'+(r.ref_pedido||'—')+'</td><td>'+(r.fecha||'—')+'</td><td class="bold">'+fmt(r.importe)+'</td><td>'+semaforo(r.estado||'—')+'</td><td>'+link+'</td></tr>';
-      }).join('')+'</tbody></table>';
-  });
-}
-</script>
-</body>
-</html>
